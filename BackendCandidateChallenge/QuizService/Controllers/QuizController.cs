@@ -37,13 +37,13 @@ public class QuizController : Controller
     public object Get(int id)
     {
         const string quizSql = "SELECT * FROM Quiz WHERE Id = @Id;";
-        var quiz = _connection.QuerySingle<Quiz>(quizSql, new {Id = id});
+        var quiz = _connection.QuerySingleOrDefault<Quiz>(quizSql, new { Id = id });
         if (quiz == null)
             return NotFound();
         const string questionsSql = "SELECT * FROM Question WHERE QuizId = @QuizId;";
-        var questions = _connection.Query<Question>(questionsSql, new {QuizId = id});
+        var questions = _connection.Query<Question>(questionsSql, new { QuizId = id });
         const string answersSql = "SELECT a.Id, a.Text, a.QuestionId FROM Answer a INNER JOIN Question q ON a.QuestionId = q.Id WHERE q.QuizId = @QuizId;";
-        var answers = _connection.Query<Answer>(answersSql, new {QuizId = id})
+        var answers = _connection.Query<Answer>(answersSql, new { QuizId = id })
             .Aggregate(new Dictionary<int, IList<Answer>>(), (dict, answer) => {
                 if (!dict.ContainsKey(answer.QuestionId))
                     dict.Add(answer.QuestionId, new List<Answer>());
@@ -77,7 +77,7 @@ public class QuizController : Controller
 
     // POST api/quizzes
     [HttpPost]
-    public IActionResult Post([FromBody]QuizCreateModel value)
+    public IActionResult Post([FromBody] QuizCreateModel value)
     {
         var sql = $"INSERT INTO Quiz (Title) VALUES('{value.Title}'); SELECT LAST_INSERT_ROWID();";
         var id = _connection.ExecuteScalar(sql);
@@ -86,10 +86,10 @@ public class QuizController : Controller
 
     // PUT api/quizzes/5
     [HttpPut("{id}")]
-    public IActionResult Put(int id, [FromBody]QuizUpdateModel value)
+    public IActionResult Put(int id, [FromBody] QuizUpdateModel value)
     {
         const string sql = "UPDATE Quiz SET Title = @Title WHERE Id = @Id";
-        int rowsUpdated = _connection.Execute(sql, new {Id = id, Title = value.Title});
+        int rowsUpdated = _connection.Execute(sql, new { Id = id, Title = value.Title });
         if (rowsUpdated == 0)
             return NotFound();
         return NoContent();
@@ -100,7 +100,7 @@ public class QuizController : Controller
     public IActionResult Delete(int id)
     {
         const string sql = "DELETE FROM Quiz WHERE Id = @Id";
-        int rowsDeleted = _connection.Execute(sql, new {Id = id});
+        int rowsDeleted = _connection.Execute(sql, new { Id = id });
         if (rowsDeleted == 0)
             return NotFound();
         return NoContent();
@@ -109,19 +109,24 @@ public class QuizController : Controller
     // POST api/quizzes/5/questions
     [HttpPost]
     [Route("{id}/questions")]
-    public IActionResult PostQuestion(int id, [FromBody]QuestionCreateModel value)
+    public IActionResult PostQuestion(int id, [FromBody] QuestionCreateModel value)
     {
+        const string quizSql = "SELECT * FROM Quiz WHERE Id = @Id;";
+        var quiz = _connection.QuerySingleOrDefault<Quiz>(quizSql, new { Id = id });
+        if (quiz == null)
+            return NotFound();
+
         const string sql = "INSERT INTO Question (Text, QuizId) VALUES(@Text, @QuizId); SELECT LAST_INSERT_ROWID();";
-        var questionId = _connection.ExecuteScalar(sql, new {Text = value.Text, QuizId = id});
+        var questionId = _connection.ExecuteScalar(sql, new { Text = value.Text, QuizId = id });
         return Created($"/api/quizzes/{id}/questions/{questionId}", null);
     }
 
     // PUT api/quizzes/5/questions/6
     [HttpPut("{id}/questions/{qid}")]
-    public IActionResult PutQuestion(int id, int qid, [FromBody]QuestionUpdateModel value)
+    public IActionResult PutQuestion(int id, int qid, [FromBody] QuestionUpdateModel value)
     {
         const string sql = "UPDATE Question SET Text = @Text, CorrectAnswerId = @CorrectAnswerId WHERE Id = @QuestionId";
-        int rowsUpdated = _connection.Execute(sql, new {QuestionId = qid, Text = value.Text, CorrectAnswerId = value.CorrectAnswerId});
+        int rowsUpdated = _connection.Execute(sql, new { QuestionId = qid, Text = value.Text, CorrectAnswerId = value.CorrectAnswerId });
         if (rowsUpdated == 0)
             return NotFound();
         return NoContent();
@@ -133,26 +138,26 @@ public class QuizController : Controller
     public IActionResult DeleteQuestion(int id, int qid)
     {
         const string sql = "DELETE FROM Question WHERE Id = @QuestionId";
-        _connection.ExecuteScalar(sql, new {QuestionId = qid});
+        _connection.ExecuteScalar(sql, new { QuestionId = qid });
         return NoContent();
     }
 
     // POST api/quizzes/5/questions/6/answers
     [HttpPost]
     [Route("{id}/questions/{qid}/answers")]
-    public IActionResult PostAnswer(int id, int qid, [FromBody]AnswerCreateModel value)
+    public IActionResult PostAnswer(int id, int qid, [FromBody] AnswerCreateModel value)
     {
         const string sql = "INSERT INTO Answer (Text, QuestionId) VALUES(@Text, @QuestionId); SELECT LAST_INSERT_ROWID();";
-        var answerId = _connection.ExecuteScalar(sql, new {Text = value.Text, QuestionId = qid});
+        var answerId = _connection.ExecuteScalar(sql, new { Text = value.Text, QuestionId = qid });
         return Created($"/api/quizzes/{id}/questions/{qid}/answers/{answerId}", null);
     }
 
     // PUT api/quizzes/5/questions/6/answers/7
     [HttpPut("{id}/questions/{qid}/answers/{aid}")]
-    public IActionResult PutAnswer(int id, int qid, int aid, [FromBody]AnswerUpdateModel value)
+    public IActionResult PutAnswer(int id, int qid, int aid, [FromBody] AnswerUpdateModel value)
     {
         const string sql = "UPDATE Answer SET Text = @Text WHERE Id = @AnswerId";
-        int rowsUpdated = _connection.Execute(sql, new {AnswerId = qid, Text = value.Text});
+        int rowsUpdated = _connection.Execute(sql, new { AnswerId = qid, Text = value.Text });
         if (rowsUpdated == 0)
             return NotFound();
         return NoContent();
@@ -164,7 +169,7 @@ public class QuizController : Controller
     public IActionResult DeleteAnswer(int id, int qid, int aid)
     {
         const string sql = "DELETE FROM Answer WHERE Id = @AnswerId";
-        _connection.ExecuteScalar(sql, new {AnswerId = aid});
+        _connection.ExecuteScalar(sql, new { AnswerId = aid });
         return NoContent();
     }
 }

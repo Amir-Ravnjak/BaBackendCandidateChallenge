@@ -34,6 +34,15 @@ public class QuizController : Controller
         return Ok(await Mediator.Send(new GetAllQuizesQuery()));
     }
 
+    //First, actions aren't supposed to be filled with all logic. You shouldn't be writing queries in them.
+    //You should make controller for each functional logic. Questions should have separate controller, answers too. If you continue adding more features or tables, this one will get too big to maintain.
+
+    //Either make use of mediatR and send requests and just handle response, or make services for each domain object, and costume services, so your action gets max 3-5 lines of code big.
+
+    //Make use of asynchronous features of C# (async/await), so your main thread doesn't get blocked. It matters a lot once you start getting more requests.
+    //All network related operations have async implementation, so you should use it.
+
+
     // GET api/quizzes/5
     [HttpGet("{id}")]
     public object Get(int id)
@@ -44,6 +53,9 @@ public class QuizController : Controller
             return NotFound();
         const string questionsSql = "SELECT * FROM Question WHERE QuizId = @QuizId;";
         var questions = _connection.Query<Question>(questionsSql, new { QuizId = id });
+
+        //TODO: Check if there are any questions. Maybe quiz is just made, and there are 0 questions. If there are no questions, we shouldn't query for answers.
+
         const string answersSql = "SELECT a.Id, a.Text, a.QuestionId FROM Answer a INNER JOIN Question q ON a.QuestionId = q.Id WHERE q.QuizId = @QuizId;";
         var answers = _connection.Query<Answer>(answersSql, new { QuizId = id })
             .Aggregate(new Dictionary<int, IList<Answer>>(), (dict, answer) =>
@@ -91,6 +103,7 @@ public class QuizController : Controller
     [HttpPut("{id}")]
     public IActionResult Put(int id, [FromBody] QuizUpdateModel value)
     {
+        //By conventions, on put methods, body models also have property Id, and we should check if it is equal to id from route.        
         const string sql = "UPDATE Quiz SET Title = @Title WHERE Id = @Id";
         int rowsUpdated = _connection.Execute(sql, new { Id = id, Title = value.Title });
         if (rowsUpdated == 0)
@@ -128,6 +141,8 @@ public class QuizController : Controller
     [HttpPut("{id}/questions/{qid}")]
     public IActionResult PutQuestion(int id, int qid, [FromBody] QuestionUpdateModel value)
     {
+        //quiz id is not used, thus we should avoid unnecessary variables. This should be fixed by moving questions related features to separate controller
+        //TODO: Check if answer with given Id exists.
         const string sql = "UPDATE Question SET Text = @Text, CorrectAnswerId = @CorrectAnswerId WHERE Id = @QuestionId";
         int rowsUpdated = _connection.Execute(sql, new { QuestionId = qid, Text = value.Text, CorrectAnswerId = value.CorrectAnswerId });
         if (rowsUpdated == 0)
@@ -140,6 +155,7 @@ public class QuizController : Controller
     [Route("{id}/questions/{qid}")]
     public IActionResult DeleteQuestion(int id, int qid)
     {
+        //quiz id is not used, thus we should avoid unnecessary variables. This should be fixed by moving questions related features to separate controller
         const string sql = "DELETE FROM Question WHERE Id = @QuestionId";
         _connection.ExecuteScalar(sql, new { QuestionId = qid });
         return NoContent();
@@ -150,6 +166,7 @@ public class QuizController : Controller
     [Route("{id}/questions/{qid}/answers")]
     public IActionResult PostAnswer(int id, int qid, [FromBody] AnswerCreateModel value)
     {
+        //TODO: check if question with given id exists before trying to insert answer
         const string sql = "INSERT INTO Answer (Text, QuestionId) VALUES(@Text, @QuestionId); SELECT LAST_INSERT_ROWID();";
         var answerId = _connection.ExecuteScalar(sql, new { Text = value.Text, QuestionId = qid });
         return Created($"/api/quizzes/{id}/questions/{qid}/answers/{answerId}", null);
@@ -171,6 +188,7 @@ public class QuizController : Controller
     [Route("{id}/questions/{qid}/answers/{aid}")]
     public IActionResult DeleteAnswer(int id, int qid, int aid)
     {
+        //TODO: check if this answer was correct answer for some question. If so, update correctAnswerId of that question to null.
         const string sql = "DELETE FROM Answer WHERE Id = @AnswerId";
         _connection.ExecuteScalar(sql, new { AnswerId = aid });
         return NoContent();

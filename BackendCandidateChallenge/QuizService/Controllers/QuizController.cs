@@ -5,12 +5,21 @@ using Microsoft.AspNetCore.Mvc;
 using QuizService.Model;
 using QuizService.Model.Domain;
 using System.Linq;
+using MediatR;
+using Microsoft.Extensions.DependencyInjection;
+using System.Threading.Tasks;
+using System.Threading;
+using Application.Quizzes.Queries.GetAllQuizzes;
 
 namespace QuizService.Controllers;
 
 [Route("api/quizzes")]
 public class QuizController : Controller
 {
+    private ISender _mediator;
+    protected ISender Mediator => _mediator ??= HttpContext.RequestServices.GetService<ISender>();
+
+    //left this field and constructor so the rest of actions works.
     private readonly IDbConnection _connection;
 
     public QuizController(IDbConnection connection)
@@ -20,16 +29,9 @@ public class QuizController : Controller
 
     // GET api/quizzes
     [HttpGet]
-    public IEnumerable<QuizResponseModel> Get()
+    public async Task<ActionResult<IEnumerable<QuizDto>>> Get(CancellationToken cancellationToken)
     {
-        const string sql = "SELECT * FROM Quiz;";
-        var quizzes = _connection.Query<Quiz>(sql);
-        return quizzes.Select(quiz =>
-            new QuizResponseModel
-            {
-                Id = quiz.Id,
-                Title = quiz.Title
-            });
+        return Ok(await Mediator.Send(new GetAllQuizesQuery()));
     }
 
     // GET api/quizzes/5
@@ -44,7 +46,8 @@ public class QuizController : Controller
         var questions = _connection.Query<Question>(questionsSql, new { QuizId = id });
         const string answersSql = "SELECT a.Id, a.Text, a.QuestionId FROM Answer a INNER JOIN Question q ON a.QuestionId = q.Id WHERE q.QuizId = @QuizId;";
         var answers = _connection.Query<Answer>(answersSql, new { QuizId = id })
-            .Aggregate(new Dictionary<int, IList<Answer>>(), (dict, answer) => {
+            .Aggregate(new Dictionary<int, IList<Answer>>(), (dict, answer) =>
+            {
                 if (!dict.ContainsKey(answer.QuestionId))
                     dict.Add(answer.QuestionId, new List<Answer>());
                 dict[answer.QuestionId].Add(answer);

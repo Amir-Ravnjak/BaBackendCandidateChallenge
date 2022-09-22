@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using PactNet.Mocks.MockHttpService;
 using PactNet.Mocks.MockHttpService.Models;
+using QuizClient.Model;
 using Xunit;
 
 namespace QuizClient.Tests;

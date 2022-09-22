@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Dapper" Version="2.0.123" />
+		<PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Remove="Persistance\Migrations\001-CreateTables.sql" />
+		<None Remove="Persistance\Migrations\002-InsertSeedData.sql" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="Persistance\Migrations\001-CreateTables.sql" />
+		<EmbeddedResource Include="Persistance\Migrations\002-InsertSeedData.sql" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Application\Application.csproj" />
+	</ItemGroup>
+
+</Project>
